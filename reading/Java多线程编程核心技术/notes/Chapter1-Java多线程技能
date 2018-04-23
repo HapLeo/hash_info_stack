@@ -1,0 +1,126 @@
+### 1.1 进程和多线程的概念及线程的优点
+
+#### 1. 什么是进程？
+进程是受操作系统管理的基本运行单元。windows操作系统下一个.exe程序就可以理解为一个进程。
+#### 2. 什么是线程？
+线程可理解成是在进程中独立运行的子任务。例如，QQ可以同时执行好友视频、下载文件、发送表情等任务。
+
+#### 3. 为什么使用多线程？
+你正在使用QQ下载一个文件，需要100秒，这时你想发送一个表情给好友，需要1秒时间。
+如果没有多线程，你必须等待文件下载完毕后才可以发送表情。有了多线程，你就可以在下载文件的同时
+发送这个表情。CPU在两个线程之间快速切换执行，因此表情很快被发送出去，下载也一直在执行。
+
+### 1.2 如何创建线程？
+#### 方法一：继承Thread类，覆盖run()方法来写入业务代码，调用start方法通知JVM执行该线程。
+代码如下：
+```java
+public class MyThread extends Thread {
+
+    @Override
+    public void run() {  // 重写Thread类的run()方法
+        System.out.println(Thread.currentThread().getName()+ " is running... ");
+    }
+
+    public static void main(String[] args) {
+        new MyThread().start();  //调用start方法通知JVM调用该线程
+    }
+}
+
+```
+#### 方法二：实现Runnable接口，覆盖run()方法来写入业务代码，再通过Thread类的Thread(Runnable r) 或Thread(Runnable r,String name) 构造方法构造出Thread对象，调用start方法通知JVM执行该线程。
+代码如下：
+```java
+public class MyRunnable implements Runnable {
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getName()+" :Runnable is running...");
+    }
+
+    public static void main(String[] args) {
+        Thread thread1 = new Thread(new MyRunnable()); // 不指定线程名称
+        Thread thread2 = new Thread(new MyRunnable(),"MyRunnable");  //指定线程名称
+        thread1.start(); // 通知JVM执行该线程
+        thread2.start();
+    }
+}
+
+```
+【注意】
+1. Thread类是一个实体类，它实现了Runnable接口。
+2. start()方法的作用并不是执行线程，而是通知JVM去执行这个线程，至于JVM何时执行，并不能确定。
+如果在main()方法中调用该实例的run()方法而不是start()方法，则相当于普通的方法调用，run()方法会被立即执行，但并没有启动多线程。
+3. new Thread(Runnable r)和new Thread(Runnable r,String name)方法入参类型Runnable,因此所有实现了Runnable接口的类
+均可通过该构造方法传入到另一个Thread对象中。这使得传入的对象可能被多个线程操作而出现非线程安全的问题。
+
+#### 线程安全问题
+多个线程公用统一资源，常常会出现线程安全问题。
+代码如下：
+
+```java
+
+public class MyThread extends Thread {
+
+    private int count = 5;
+
+    @Override
+    public void run() {
+        if (count>0) {
+            count --;
+            System.out.println(Thread.currentThread().getName() + ":count= "+count);
+        }
+    }
+
+    public static void main(String[] args) {
+
+        Thread mythread = new MyThread();
+
+        new Thread(mythread,"A").start();
+        new Thread(mythread,"B").start();
+        new Thread(mythread,"C").start();
+        new Thread(mythread,"D").start();
+        new Thread(mythread,"E").start();
+    }
+}
+
+/* 输出结果：
+B:count= 3
+A:count= 3
+C:count= 2
+D:count= 1
+E:count= 0
+*/
+```
+我们发现，输出结果有重复，这是因为run()方法中的操作不是原子操作，在执行过程中可能会切换到另一线程。
+
+【注意】“count--”这个操作本身也不是原子操作，它包含： 1)取得原有i值；2)计算i-1；3)对i进行赋值。
+
+#### 解决方法：加同步锁
+
+
+```java
+
+public class MyThread extends Thread {
+    private int count = 5;
+    @Override
+    synchronized public void run() {
+        if (count>0) {
+            count --;
+            System.out.println(Thread.currentThread().getName() + ":count= "+count);
+        }
+    }
+  ```
+
+#### Thread类中定义的方法
+
+方法名 | 作用 | 是否static
+--- | --- | ---
+currentThread() | 返回当前(正在执行此行代码的)线程 | Y
+sleep() | 使当前(正在执行此行代码的)线程休眠指定时间，只让出CPU不释放锁 |Y
+interrupted() | 判断当前线程是否已经停止 | Y
+yield() | 使当前线程放弃CPU | Y
+isAlive() | 判断某个线程是否处于活动状态 | N
+getId() | 取得某个线程唯一标识 | N
+interrupt() | 停止线程（但并非立即停止）| N
+isInterrupted() | 判断某个线程是否已经停止 | N
+setPriority(int newPriority) | 给某个线程设置优先级（1~10） | N
+setDaemon(boolean on) | 将某个线程设为守护线程 | N

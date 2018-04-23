@@ -1,0 +1,123 @@
+
+1. 方法内的变量（局部变量）是线程安全的。
+
+2. 一个线程访问synchronized方法时，获取的是这个方法所属对象的锁（Lock），
+一旦某个线程获取了锁，其他线程则无法访问这个对象中所有的synchronized方法，
+但可以访问所有非synchronized方法（包括static方法）。
+代码如下：
+
+```java
+
+public class MyObject extends Thread{
+
+    @Override
+    public void run() {
+        switch(Thread.currentThread().getName()){
+            case "A":this.printA();break;
+            case "B":this.printB();break;
+            case "C":this.printC();break;
+            case "D":this.printD();break;
+            default:
+                System.out.println("undefined...");
+        }
+
+    }
+
+    public void printA(){
+        System.out.println("printA() is common...");
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    synchronized public void printB(){
+        System.out.println("printB() is synchronized...");
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void printC(){
+        System.out.println("printC is static...");
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    synchronized public static void printD(){
+        System.out.println("printD() is synchronized static...");
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        MyObject myObject = new MyObject();
+        new Thread(myObject,"A").start();
+        new Thread(myObject,"B").start();
+        new Thread(myObject,"C").start();
+        new Thread(myObject,"D").start();
+        new Thread(myObject,"A").start();
+        new Thread(myObject,"B").start();
+        new Thread(myObject,"C").start();
+        new Thread(myObject,"D").start();
+    }
+}
+
+/*执行结果
+printA() is common...
+printB() is synchronized...
+printC is static...
+printD() is synchronized static...
+printA() is common...
+printC is static...
+*/
+//两秒之后
+/*
+printB() is synchronized...
+printD() is synchronized static...
+ */
+```
+
+3.synchronized关键字具有锁重入的功能，即A线程获取了某个对象的锁且还没有释放时，
+当再次想要获取这个对象的锁的时候（比如调用该对象的另一个synchronized方法），
+是可以直接获取的。且这种机制支持父子继承的环境中（即如果A线程获取了子类的对象锁
+且尚未释放时，需要执行父类中的synchronized方法是可以直接执行的）。这条很好理解，
+因为该对象锁已经被A线程获取时，并不会有其他线程能够执行该对象的其他synchronized方法，
+因此A线程当然可以直接执行该对象的其他synchronized方法。
+而父类中的方法也只是在这个子类的实例中的父类方法，与上述同理。
+
+4. 当一个线程执行的代码出现异常时，其所持有的锁会自动释放。
+
+5. 当需要同步的代码仅仅为某个方法中的几行代码时，可以使用synchronized(this)同步代码块代替同步方法以提高执行效率。
+synchronized(this)同步代码块锁定的也是当前对象，表示“将当前对象作为对象监视器”。
+
+6.Java支持将任意对象作为对象监视器，不同监视器之间是非同步关系，同一监视器下一定是同步关系。
+
+因此，有如下结论：
+1. 当多个线程同时执行synchronized(x)同步代码块时呈同步效果。
+2. 当其他线程执行x对象中synchronized同步方法是呈同步效果。
+3. 当其他线程执行x对象方法里面的synchronized（this）代码块时也呈现同步效果。
+
+
+7.synchronized 加在static方法上表示"将类作为对象监视器"，相当于synchronized(A.class)代码块，
+可以同步A类的所有对象调用该方法或代码块；
+
+8.注意一些带有缓存的对象如String、Integer（-128~127范围内），
+通常不使用这些对象多为对象监视器，以免出现错误。
+
+9.volatile关键字可以让所有线程对其修饰的变量可见，
+原理是让所有线程直接读取公共内存中的变量值，而不是线程内工作内存的变量值。
+
+![]()
+
+10.在进行累加（++）等操作时，最好使用原子类型（例如AtomicInteger）进行操作，
+因为普通的累加操作并不是原子操作，不能保证线程同步。

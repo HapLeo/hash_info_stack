@@ -1,0 +1,48 @@
+## Intellij Idea新建Maven web项目 方法及配置
+
+### 1.通过archetype新建web项目
+- file ->new ->project ->Maven
+- 勾选create from archetype
+- 选中maven-archetype-webapp
+- 填写GroupId、ArtifactId和Version坐标（用于唯一标识该项目当前版本）
+- Maven home directory选择maven 安装目录
+- Project Name 填写项目名
+- 点击确定生成web项目结构
+
+### 2.添加Maven目录结构
+- 在main包中新建java包
+- 在main包同级新建test
+- 在test包中新建java包
+
+### 3.配置源码目录、war包生成目录
+- file -> Project Structure -> Modules
+- main中的java目录设为src
+- test中的java目录设为Tests
+- Artifacts ->+ -> Name ->web_service:compile out
+
+### 4.配置tomcat
+- Edit Configuration -> + -> Tomcat Server -> local -> deployment
+- 配置上当前项目的war
+
+### 5.添加j2ee依赖
+
+```xml
+<!-- 导入JavaEE 依赖 -->
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-api</artifactId>
+      <version>7.0</version>
+    </dependency>
+```
+
+### 6.新建注解Servlet（Servlet3.0 from Java EE 6.0）
+- 在main的java包中右键new -> Servlet
+- 配置访问路径
+```java
+@WebServlet(name = "ESBServlet",urlPatterns = "/ESBServlet")
+//注意：默认只有name,urlPatterns需要自己配，不配则没有访问路径
+```
+
+### 7.发布项目
+- Maven Projects ->clean - package
+Tomcat(当前项目运行按钮) ->run
